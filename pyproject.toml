@@ -34,7 +34,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
 extend-exclude = [".venv"]
 
@@ -43,3 +43,5 @@ select = ["E", "F", "I", "B", "UP", "W"]
 
 [tool.ruff.lint.per-file-ignores]
 "hermes_phone/bridge/webpage.py" = ["E501"]  # embedded HTML/JS/CSS
+"hermes_phone/dryrun/scenarios.py" = ["E501"]  # test scenario dialogue
+"hermes_phone/adapters/xai.py" = ["E501"]  # API endpoint URLs

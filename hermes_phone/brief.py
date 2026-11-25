@@ -33,7 +33,7 @@ WONT_SHARE_ALWAYS = "card data, address, ID numbers, anything not listed above"
 
 def opening_line(user_name: str, record: bool = False, language: str = "en") -> str:
     """First thing the callee hears. AI disclosure is always the first sentence.
-    
+
     Phase 1: Configurable via HERMES_PHONE_OPENER_TEXT_EN and _AR env vars.
     Default (Mohamed's decision 25 Nov 2026): AI identity only, no transcription mention.
     """
