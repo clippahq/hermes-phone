@@ -93,8 +93,16 @@ def is_blocked(raw: object) -> Check:
         if len(cand) < MIN_NATIONAL_DIGITS:
             return Check(False, "Short codes and emergency-length numbers are blocked.")
     for cand in cands:
+        # US premium-rate numbers
         if len(cand) == 10 and cand[:3] in {"900", "976"}:
             return Check(False, "Premium-rate numbers (1-900 / 1-976) are blocked.")
+        # UK premium-rate and information services (0900, 0906-0909, 118xxx)
+        if cand.startswith("0900") or cand.startswith("0906") or cand.startswith("0907") or \
+           cand.startswith("0908") or cand.startswith("0909") or cand.startswith("118"):
+            return Check(False, "UK premium-rate/information numbers are blocked.")
+        # European premium-rate (Germany 0900, France 0899, etc.)
+        if cand.startswith("0900") or cand.startswith("0899"):
+            return Check(False, "European premium-rate numbers are blocked.")
     # Bahrain (+973) premium rate blocks (Phase 1: Mohamed's deployment)
     try:
         pn = _pn()
