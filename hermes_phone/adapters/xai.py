@@ -10,8 +10,7 @@ import logging
 from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
-from . import LLMAdapter, LLMMessage
-
+from . import LLMMessage
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +19,14 @@ XAI_API_BASE = "https://api.x.ai/v1"
 
 class XAILLMAdapter:
     """Streaming LLM via xAI Grok with OpenAI-compatible API.
-    
+
     Args:
         api_key: xAI API key
         model: Model name ("grok-4.3", "grok-4.7", etc.)
         reasoning_effort: Reasoning effort level ("none", "low", "medium", "high", "xhigh")
         temperature: Sampling temperature (0.0 to 2.0)
     """
-    
+
     def __init__(
         self,
         api_key: str,
@@ -42,7 +41,7 @@ class XAILLMAdapter:
         self.temperature = temperature
         self._response_queue: asyncio.Queue[str | None] = asyncio.Queue()
         self._tool_calls_queue: asyncio.Queue[list[dict]] = asyncio.Queue()
-    
+
     async def send_message(
         self,
         messages: list[LLMMessage],
@@ -50,8 +49,7 @@ class XAILLMAdapter:
         reasoning_effort: str | None = None,
     ) -> None:
         """Send a conversation turn to Grok and start streaming response."""
-        import httpx
-        
+
         # Convert LLMMessage to OpenAI format
         formatted_messages = []
         for msg in messages:
@@ -64,35 +62,35 @@ class XAILLMAdapter:
             if msg.tool_call_id:
                 formatted["tool_call_id"] = msg.tool_call_id
             formatted_messages.append(formatted)
-        
+
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": formatted_messages,
             "temperature": self.temperature,
             "stream": True,
         }
-        
+
         # Add reasoning effort if model supports it
         effort = reasoning_effort or self.reasoning_effort
         if effort and effort != "none":
             payload["reasoning"] = {"effort": effort}
-        
+
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
-        
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-        
+
         # Stream the response
         asyncio.create_task(self._stream_response(payload, headers))
-    
+
     async def _stream_response(self, payload: dict, headers: dict) -> None:
         """Background task to stream tokens from Grok."""
         import httpx
-        
+
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 async with client.stream(
@@ -102,32 +100,32 @@ class XAILLMAdapter:
                     headers=headers,
                 ) as response:
                     response.raise_for_status()
-                    
+
                     tool_calls_accumulator: dict[int, dict] = {}
-                    
+
                     async for line in response.aiter_lines():
                         if not line.startswith("data: "):
                             continue
-                        
+
                         data_str = line[6:].strip()
                         if data_str == "[DONE]":
                             break
-                        
+
                         try:
                             chunk = json.loads(data_str)
                         except json.JSONDecodeError:
                             continue
-                        
+
                         choices = chunk.get("choices", [])
                         if not choices:
                             continue
-                        
+
                         delta = choices[0].get("delta", {})
-                        
+
                         # Handle content tokens
                         if "content" in delta and delta["content"]:
                             await self._response_queue.put(delta["content"])
-                        
+
                         # Handle tool calls
                         if "tool_calls" in delta:
                             for tc in delta["tool_calls"]:
@@ -138,23 +136,23 @@ class XAILLMAdapter:
                                         "type": tc.get("type", "function"),
                                         "function": {"name": "", "arguments": ""},
                                     }
-                                
+
                                 if "function" in tc:
                                     if "name" in tc["function"]:
                                         tool_calls_accumulator[idx]["function"]["name"] = tc["function"]["name"]
                                     if "arguments" in tc["function"]:
                                         tool_calls_accumulator[idx]["function"]["arguments"] += tc["function"]["arguments"]
-                    
+
                     # Send accumulated tool calls
                     if tool_calls_accumulator:
                         tool_calls_list = [tool_calls_accumulator[i] for i in sorted(tool_calls_accumulator.keys())]
                         await self._tool_calls_queue.put(tool_calls_list)
-                    
+
         except Exception as e:  # noqa: BLE001
             log.error("xAI stream error: %s", e)
         finally:
             await self._response_queue.put(None)
-    
+
     async def receive_tokens(self) -> AsyncIterator[str]:
         """Receive streaming response tokens."""
         while True:
@@ -162,14 +160,14 @@ class XAILLMAdapter:
             if token is None:
                 break
             yield token
-    
+
     async def receive_tool_calls(self) -> list[dict[str, Any]]:
         """Receive tool calls from the LLM."""
         try:
             return await asyncio.wait_for(self._tool_calls_queue.get(), timeout=0.1)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return []
-    
+
     async def close(self) -> None:
         """Close the LLM connection."""
         # Clear queues
@@ -178,7 +176,7 @@ class XAILLMAdapter:
                 self._response_queue.get_nowait()
             except asyncio.QueueEmpty:
                 break
-        
+
         while not self._tool_calls_queue.empty():
             try:
                 self._tool_calls_queue.get_nowait()

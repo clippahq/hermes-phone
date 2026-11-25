@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -46,10 +45,10 @@ async def measure_ttfa(
     # 2. Stream first LLM tokens to TTS API
     # 3. Measure time to first audio chunk
     # 4. Return full latency breakdown
-    
+
     # Placeholder: simulate measurements
     await asyncio.sleep(0.1)  # Simulate network call
-    
+
     return TTFAResult(
         llm_model=llm_model,
         tts_model="eleven_flash_v2_5",
@@ -61,39 +60,39 @@ async def measure_ttfa(
 
 async def run_ttfa_benchmark() -> dict[str, Any]:
     """Run TTFA benchmark on configured LLM+TTS combinations.
-    
+
     Requires:
         - XAI_API_KEY (or ANTHROPIC_API_KEY for Claude)
         - ELEVENLABS_API_KEY
         - ELEVENLABS_VOICE_ID
-    
+
     Returns:
         Dictionary with per-model results and summary.
     """
     xai_key = os.environ.get("XAI_API_KEY")
     elevenlabs_key = os.environ.get("ELEVENLABS_API_KEY")
     voice_id = os.environ.get("ELEVENLABS_VOICE_ID")
-    
+
     if not xai_key or not elevenlabs_key or not voice_id:
         return {
             "error": "Missing required keys: XAI_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID",
             "results": [],
         }
-    
+
     models = [
         ("grok-4.3", "reasoning: none"),
         ("grok-4.20", "non-reasoning"),
     ]
-    
+
     results: list[TTFAResult] = []
-    
+
     print("Running TTFA benchmark...")
     print(f"Prompts: {len(TEST_PROMPTS)}")
     print(f"Models: {', '.join(m[0] for m in models)}\n")
-    
+
     for llm_model, description in models:
         print(f"{llm_model} ({description}):")
-        
+
         for i, prompt in enumerate(TEST_PROMPTS, 1):
             try:
                 result = await measure_ttfa(
@@ -104,15 +103,15 @@ async def run_ttfa_benchmark() -> dict[str, Any]:
                     prompt,
                 )
                 results.append(result)
-                
+
                 print(f"  Prompt {i}: TTFA={result.ttfa_ms:.0f}ms "
                       f"(TTFT={result.llm_ttft_ms:.0f}ms + TTS={result.tts_first_chunk_ms:.0f}ms)")
-            
+
             except Exception as e:  # noqa: BLE001
                 print(f"  Prompt {i}: ERROR - {e}")
-        
+
         print()
-    
+
     # Compute p50 per model
     summary: dict[str, Any] = {}
     for model, _ in models:
@@ -120,15 +119,15 @@ async def run_ttfa_benchmark() -> dict[str, Any]:
         if model_results:
             ttfa_values = sorted(r.ttfa_ms for r in model_results)
             p50 = ttfa_values[len(ttfa_values) // 2]
-            
+
             summary[model] = {
                 "p50_ttfa_ms": p50,
                 "sample_count": len(model_results),
             }
-            
+
             status = "✓" if p50 <= 800 else "✗"
             print(f"{status} {model}: p50 TTFA = {p50:.0f}ms (target: ≤800ms)")
-    
+
     return {
         "summary": summary,
         "results": [

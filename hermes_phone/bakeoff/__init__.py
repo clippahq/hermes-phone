@@ -8,5 +8,4 @@ from __future__ import annotations
 from .stt_benchmark import run_stt_bakeoff
 from .ttfa_benchmark import run_ttfa_benchmark
 
-
 __all__ = ["run_stt_bakeoff", "run_ttfa_benchmark"]

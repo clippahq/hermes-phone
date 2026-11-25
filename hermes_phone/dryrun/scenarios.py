@@ -1,7 +1,7 @@
 """Seven required dry-run test scenarios for Phase 1.
 
 Each scenario defines a scripted conversation flow with expected behaviors.
-Scenarios must pass 100% on AI disclosure, zero policy/card leaks, and 
+Scenarios must pass 100% on AI disclosure, zero policy/card leaks, and
 slot read-back accuracy before moving to live calls.
 """
 from __future__ import annotations

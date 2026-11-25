@@ -8,5 +8,4 @@ from __future__ import annotations
 from .harness import DryRunHarness, ScenarioResult
 from .scenarios import SCENARIOS
 
-
 __all__ = ["DryRunHarness", "ScenarioResult", "SCENARIOS"]

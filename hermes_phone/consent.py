@@ -20,7 +20,8 @@ _KEY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
                        r"|auth(entication)?[_\s-]?code|sms[_\s-]?code")),
     ("password", re.compile(r"passw|passcode|\bpin\b|secret|credential|api[_\s-]?key|token")),
     # Phase 1: Added CPR and passport as forbidden (Bahrain deployment)
-    ("cpr", re.compile(r"\bcpr\b|civil[_\s-]?personal[_\s-]?registry|bahrain[_\s-]?id"
+    ("cpr", re.compile(r"\bcpr\b|^cpr[_\s-]|[_\s-]cpr[_\s-]|[_\s-]cpr$"
+                      r"|civil[_\s-]?personal[_\s-]?registry|bahrain[_\s-]?id"
                       r"|bahraini[_\s-]?(national[_\s-]?)?id", re.IGNORECASE)),
     ("passport", re.compile(r"passport|travel[_\s-]?doc", re.IGNORECASE)),
     ("card", re.compile(r"card|credit|debit|\bcc\b|\bpan\b|expir")),

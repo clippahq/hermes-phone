@@ -27,9 +27,9 @@ def main() -> int:
         help="Print full transcripts",
     )
     args = parser.parse_args()
-    
+
     harness = DryRunHarness()
-    
+
     if args.scenario:
         scenarios = [s for s in SCENARIOS if s.name == args.scenario]
         if not scenarios:
@@ -38,9 +38,9 @@ def main() -> int:
             return 1
     else:
         scenarios = SCENARIOS
-    
+
     results = harness.run_all_scenarios(scenarios)
-    
+
     if args.verbose:
         for result in results:
             print(f"\n{'='*80}")
@@ -50,9 +50,9 @@ def main() -> int:
                 speaker = "AGENT" if role == "caller" else "HOST"
                 print(f"{speaker}: {text}")
             print()
-    
+
     harness.print_results(results)
-    
+
     return 0 if all(r.passed for r in results) else 1
 
 

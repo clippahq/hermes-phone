@@ -11,8 +11,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from . import TTSAdapter, TTSChunk
-
+from . import TTSChunk
 
 log = logging.getLogger(__name__)
 
@@ -21,14 +20,14 @@ ELEVENLABS_WS_URL = "wss://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream
 
 class ElevenLabsTTSAdapter:
     """Streaming text-to-speech via ElevenLabs Flash v2.5.
-    
+
     Args:
         api_key: ElevenLabs API key
         voice_id: Voice ID or name from Voice Library
         model: TTS model (default: "eleven_flash_v2_5")
         output_format: Audio format (default: "ulaw_8000" for telephony)
     """
-    
+
     def __init__(
         self,
         api_key: str,
@@ -45,21 +44,21 @@ class ElevenLabsTTSAdapter:
         self._recv_task: asyncio.Task | None = None
         self._queue: asyncio.Queue[TTSChunk | None] = asyncio.Queue()
         self._sequence = 0
-    
+
     async def connect(self) -> None:
         """Establish WebSocket connection to ElevenLabs."""
         from websockets.asyncio.client import connect
-        
+
         url = ELEVENLABS_WS_URL.format(voice_id=self.voice_id)
         query_params = f"model_id={self.model}&output_format={self.output_format}"
         full_url = f"{url}?{query_params}"
-        
+
         self._ws = await connect(
             full_url,
             additional_headers={"xi-api-key": self.api_key},
             max_size=None,
         )
-        
+
         # Send initial config
         config = {
             "text": " ",  # Initial space to start the stream
@@ -70,16 +69,16 @@ class ElevenLabsTTSAdapter:
             "xi_api_key": self.api_key,
         }
         await self._ws.send(json.dumps(config))
-        
+
         self._recv_task = asyncio.create_task(self._receiver())
-    
+
     async def _receiver(self) -> None:
         """Background task to receive audio chunks from ElevenLabs."""
         try:
             while self._ws:
                 try:
                     message = await self._ws.recv()
-                    
+
                     if isinstance(message, bytes):
                         # Raw audio chunk
                         chunk = TTSChunk(
@@ -89,7 +88,7 @@ class ElevenLabsTTSAdapter:
                         )
                         self._sequence += 1
                         await self._queue.put(chunk)
-                    
+
                     elif isinstance(message, str):
                         # JSON message (status updates, errors, etc.)
                         try:
@@ -106,18 +105,18 @@ class ElevenLabsTTSAdapter:
                                 await self._queue.put(chunk)
                         except json.JSONDecodeError:
                             pass
-                
+
                 except Exception as e:  # noqa: BLE001
                     log.warning("ElevenLabs receiver error: %s", e)
                     break
         finally:
             await self._queue.put(None)
-    
+
     async def send_text(self, text: str, voice: str | None = None) -> None:
         """Send text for synthesis."""
         if not self._ws:
             return
-        
+
         try:
             message = {
                 "text": text,
@@ -126,16 +125,16 @@ class ElevenLabsTTSAdapter:
             await self._ws.send(json.dumps(message))
         except Exception as e:  # noqa: BLE001
             log.warning("ElevenLabs send_text error: %s", e)
-    
+
     async def receive_audio(self) -> TTSChunk | None:
         """Receive synthesized audio chunk. None when stream ends."""
         return await self._queue.get()
-    
+
     async def flush(self) -> None:
         """Flush any buffered audio."""
         if not self._ws:
             return
-        
+
         try:
             # Send empty string with flush flag
             message = {
@@ -145,7 +144,7 @@ class ElevenLabsTTSAdapter:
             await self._ws.send(json.dumps(message))
         except Exception as e:  # noqa: BLE001
             log.warning("ElevenLabs flush error: %s", e)
-    
+
     async def close(self) -> None:
         """Close the TTS connection."""
         if self._recv_task:
@@ -154,7 +153,7 @@ class ElevenLabsTTSAdapter:
                 await self._recv_task
             except asyncio.CancelledError:
                 pass
-        
+
         if self._ws:
             try:
                 await self._ws.close()

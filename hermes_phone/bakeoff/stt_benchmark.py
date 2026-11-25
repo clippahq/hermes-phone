@@ -41,17 +41,17 @@ SAMPLES_DIR = Path(__file__).parent / "samples"
 def load_samples() -> list[SampleFile]:
     """Load audio samples and their reference transcripts."""
     samples: list[SampleFile] = []
-    
+
     if not SAMPLES_DIR.exists():
         return samples
-    
+
     for audio_file in SAMPLES_DIR.glob("*.wav"):
         # Look for corresponding .txt reference file
         txt_file = audio_file.with_suffix(".txt")
         if txt_file.exists():
             reference_text = txt_file.read_text(encoding="utf-8").strip()
             samples.append(SampleFile(path=audio_file, reference_text=reference_text))
-    
+
     return samples
 
 
@@ -62,26 +62,26 @@ async def transcribe_with_deepgram(
 ) -> tuple[str, float]:
     """Transcribe audio file with Deepgram and return (transcript, latency_ms)."""
     import time
-    
+
     import httpx
-    
+
     start = time.time()
-    
+
     url = "https://api.deepgram.com/v1/listen"
     params = {
         "model": "nova-3",
         "language": language,
     }
-    
+
     if language == "multi":
         params["detect_language"] = "true"
         params["language_hint"] = "ar,en"
-    
+
     headers = {"Authorization": f"Token {api_key}"}
-    
+
     with open(audio_path, "rb") as f:
         audio_data = f.read()
-    
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
             url,
@@ -91,9 +91,9 @@ async def transcribe_with_deepgram(
         )
         response.raise_for_status()
         data = response.json()
-    
+
     latency_ms = (time.time() - start) * 1000
-    
+
     # Extract transcript
     results = data.get("results", {})
     channels = results.get("channels", [])
@@ -102,13 +102,13 @@ async def transcribe_with_deepgram(
         if alternatives:
             transcript = alternatives[0].get("transcript", "").strip()
             return transcript, latency_ms
-    
+
     return "", latency_ms
 
 
 async def run_stt_bakeoff() -> dict[str, Any]:
     """Run STT bake-off comparing Deepgram languages on all samples.
-    
+
     Returns:
         Dictionary with results per language and summary statistics.
     """
@@ -119,14 +119,14 @@ async def run_stt_bakeoff() -> dict[str, Any]:
             "languages": [],
             "samples": [],
         }
-    
+
     if cer is None or wer is None:
         return {
             "error": "jiwer not installed. Run: pip install jiwer",
             "languages": [],
             "samples": [],
         }
-    
+
     samples = load_samples()
     if not samples:
         return {
@@ -134,16 +134,16 @@ async def run_stt_bakeoff() -> dict[str, Any]:
             "languages": [],
             "samples": [],
         }
-    
+
     languages = ["ar-SA", "ar-AE", "ar", "multi"]
     results: dict[str, list[STTResult]] = {lang: [] for lang in languages}
-    
+
     print(f"Running STT bake-off on {len(samples)} samples...")
     print(f"Languages: {', '.join(languages)}\n")
-    
+
     for sample in samples:
         print(f"Sample: {sample.path.name}")
-        
+
         for language in languages:
             try:
                 transcript, latency = await transcribe_with_deepgram(
@@ -151,10 +151,10 @@ async def run_stt_bakeoff() -> dict[str, Any]:
                     language,
                     api_key,
                 )
-                
+
                 cer_score = cer(sample.reference_text, transcript)
                 wer_score = wer(sample.reference_text, transcript)
-                
+
                 result = STTResult(
                     language=language,
                     transcript=transcript,
@@ -163,14 +163,14 @@ async def run_stt_bakeoff() -> dict[str, Any]:
                     latency_ms=latency,
                 )
                 results[language].append(result)
-                
+
                 print(f"  {language}: CER={cer_score:.2%}, WER={wer_score:.2%}, latency={latency:.0f}ms")
-            
+
             except Exception as e:  # noqa: BLE001
                 print(f"  {language}: ERROR - {e}")
-        
+
         print()
-    
+
     # Compute averages
     summary: dict[str, Any] = {}
     for language in languages:
@@ -179,20 +179,20 @@ async def run_stt_bakeoff() -> dict[str, Any]:
             avg_cer = sum(r.cer_score for r in lang_results) / len(lang_results)
             avg_wer = sum(r.wer_score for r in lang_results) / len(lang_results)
             avg_latency = sum(r.latency_ms for r in lang_results) / len(lang_results)
-            
+
             summary[language] = {
                 "avg_cer": avg_cer,
                 "avg_wer": avg_wer,
                 "avg_latency_ms": avg_latency,
                 "sample_count": len(lang_results),
             }
-            
+
             print(f"{language} Average: CER={avg_cer:.2%}, WER={avg_wer:.2%}, latency={avg_latency:.0f}ms")
-    
+
     # Find best language by CER
     best_lang = min(summary.keys(), key=lambda k: summary[k]["avg_cer"])
     print(f"\nBest language by CER: {best_lang} ({summary[best_lang]['avg_cer']:.2%})")
-    
+
     return {
         "summary": summary,
         "best_language": best_lang,

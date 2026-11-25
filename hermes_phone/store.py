@@ -301,7 +301,7 @@ class Store:
 
     def get_calls_by_bahrain_date(self, bahrain_date: str) -> list[dict]:
         """Return all calls for a given Bahrain date (YYYY-MM-DD format).
-        
+
         Used by spend tracking to enforce daily limits in Bahrain timezone.
         """
         return self._all("SELECT * FROM calls WHERE bahrain_date=? AND dialed_at IS NOT NULL",
