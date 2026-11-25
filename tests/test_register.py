@@ -112,7 +112,7 @@ def test_manifest_fields(manifest):
     for key in ("name", "version", "description"):
         assert manifest[key]
     assert manifest["name"] == "hermes-phone"
-    assert manifest["homepage"] == "https://github.com/winchxyz/hermes-phone"
+    assert manifest["homepage"] == "https://github.com/clippahq/hermes-phone"
     for entry in manifest["requires_env"]:
         assert re.fullmatch(r"[A-Z][A-Z0-9_]*", entry["name"])
     # developer-only switches must not be declared as user-configurable env

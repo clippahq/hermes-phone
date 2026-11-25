@@ -21,6 +21,9 @@ ALLOW_ALL_ENV = "HERMES_PHONE_ALLOW_ALL"  # developer-only; the model cannot set
 EMERGENCY_NUMBERS = frozenset({
     "911", "112", "999", "000", "110", "119", "100", "101", "102", "103", "104", "105",
     "106", "107", "108", "109", "933", "988",
+    # Bahrain emergency numbers (added Phase 1 for Mohamed's deployment)
+    "994",  # Bahrain Ambulance
+    "998",  # Bahrain Police non-emergency
 })
 MIN_NATIONAL_DIGITS = 6
 QUIET_START_HOUR = 8
@@ -90,13 +93,29 @@ def is_blocked(raw: object) -> Check:
         if len(cand) < MIN_NATIONAL_DIGITS:
             return Check(False, "Short codes and emergency-length numbers are blocked.")
     for cand in cands:
+        # US premium-rate numbers
         if len(cand) == 10 and cand[:3] in {"900", "976"}:
             return Check(False, "Premium-rate numbers (1-900 / 1-976) are blocked.")
+        # UK premium-rate and information services (0900, 0906-0909, 118xxx)
+        if cand.startswith("0900") or cand.startswith("0906") or cand.startswith("0907") or \
+           cand.startswith("0908") or cand.startswith("0909") or cand.startswith("118"):
+            return Check(False, "UK premium-rate/information numbers are blocked.")
+        # European premium-rate (Germany 0900, France 0899, etc.)
+        if cand.startswith("0900") or cand.startswith("0899"):
+            return Check(False, "European premium-rate numbers are blocked.")
+    # Bahrain (+973) premium rate blocks (Phase 1: Mohamed's deployment)
     try:
         pn = _pn()
         parsed = _parse(raw)
-        if parsed is not None and pn.number_type(parsed) == pn.PhoneNumberType.PREMIUM_RATE:
-            return Check(False, "Premium-rate numbers are blocked.")
+        if parsed is not None:
+            # Bahrain premium rate: +973 9xxx xxxx
+            if parsed.country_code == 973:
+                national = str(parsed.national_number)
+                if len(national) == 8 and national.startswith("9"):
+                    return Check(False, "Bahrain premium-rate numbers (+973 9xxx xxxx) are blocked.")
+            # Generic premium rate check
+            if pn.number_type(parsed) == pn.PhoneNumberType.PREMIUM_RATE:
+                return Check(False, "Premium-rate numbers are blocked.")
     except Exception:  # noqa: BLE001
         pass
     return OK

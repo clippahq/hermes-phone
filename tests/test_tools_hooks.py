@@ -190,7 +190,7 @@ def test_prepare_card_and_opening_line(svc, ctx):
     out = prepare()
     assert out["state"] == "awaiting_approval" and out["approve_hint"].startswith("/phone approve")
     assert out["brief"]["opening_line"] == (
-        "Hi, this is an AI assistant calling on behalf of Winch.")
+        "Hi, I'm calling as Winch's AI assistant to book a table.")
     assert out["card_posted"] and ctx.messages and out["call_id"] in ctx.messages[0].text
     assert svc.dialer.calls == []
 

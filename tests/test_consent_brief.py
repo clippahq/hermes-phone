@@ -7,7 +7,7 @@ from hermes_phone import brief, consent
 
 @pytest.mark.parametrize("key,field", [
     ("card_number", "card"), ("credit_card", "card"), ("home_address", "address"),
-    ("passport_number", "id_number"), ("ssn", "id_number"), ("iban", "bank"),
+    ("passport_number", "passport"), ("ssn", "id_number"), ("iban", "bank"),
     ("bank_account_number", "bank"), ("email", "email"), ("mobile_phone", "phone"),
     ("cvv", "cvv"), ("CVC", "cvv"), ("security_code", "cvv"), ("password", "password"),
     ("pin", "password"), ("otp", "otp"), ("verification_code", "otp"), ("name", None),
@@ -55,10 +55,10 @@ def test_redact_text():
 
 
 def test_opening_line():
-    assert brief.opening_line("Winch") == "Hi, this is an AI assistant calling on behalf of Winch."
+    assert brief.opening_line("Winch") == "Hi, I'm calling as Winch's AI assistant to book a table."
     assert brief.opening_line("Winch", True).endswith(" This call may be recorded.")
-    assert brief.opening_line("").startswith("Hi, this is an AI assistant")
-    assert brief.opening_line(None).startswith("Hi, this is an AI assistant")
+    assert brief.opening_line("").startswith("Hi, I'm calling")
+    assert brief.opening_line(None).startswith("Hi, I'm calling")
 
 
 def test_clamp_and_cost():

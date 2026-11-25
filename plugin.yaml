@@ -1,12 +1,12 @@
 manifest_version: 2
 name: hermes-phone
-version: "0.1.0"
-description: "Approved outbound phone calls with AI disclosure, live mid-call questions, and results."
-author: winchxyz
+version: "0.2.0-phase1"
+description: "Approved outbound phone calls with pluggable adapters (Deepgram, xAI, ElevenLabs), AI disclosure, spend caps, and Bahrain PDPL compliance."
+author: clippahq (fork of winchxyz)
 kind: standalone
 license: MIT
-homepage: https://github.com/winchxyz/hermes-phone
-tags: [voice, phone, twilio, realtime]
+homepage: https://github.com/clippahq/hermes-phone
+tags: [voice, phone, twilio, deepgram, elevenlabs, xai, restaurant, booking]
 provides_tools: [phone_prepare, phone_call, phone_status, phone_transcript]
 provides_hooks: [pre_tool_call, pre_llm_call, transform_llm_output]
 python_dependencies:
@@ -17,6 +17,7 @@ python_dependencies:
   - "phonenumbers>=8.13,<10"
   - "tzdata>=2024.1,<2027"
   - "httpx>=0.27,<1"
+  - "jiwer>=3.0,<4"  # For STT bake-off CER/WER computation
 requires_env:
   - name: TWILIO_ACCOUNT_SID
     description: "Twilio account SID"
@@ -77,3 +78,50 @@ config_schema:
     type: number
     default: 0.15
     description: "Assumed OpenAI Realtime audio cost per minute for the estimate (an estimate, not a bill)"
+  # Phase 1: Pluggable adapter configuration
+  stt_adapter:
+    type: string
+    default: "deepgram"
+    description: "STT adapter: 'deepgram' or 'openai_realtime'"
+  stt_language:
+    type: string
+    default: "multi"
+    description: "Deepgram language: 'ar-SA', 'ar-AE', 'ar', or 'multi'"
+  llm_adapter:
+    type: string
+    default: "xai"
+    description: "LLM adapter: 'xai' or 'openai'"
+  llm_model:
+    type: string
+    default: "grok-4.3"
+    description: "LLM model name (e.g., 'grok-4.3', 'grok-4.7')"
+  llm_reasoning_effort:
+    type: string
+    default: "none"
+    description: "xAI reasoning effort: 'none', 'low', 'medium', 'high', 'xhigh'"
+  tts_adapter:
+    type: string
+    default: "elevenlabs"
+    description: "TTS adapter: 'elevenlabs' or 'openai_realtime'"
+  # Phase 1: Daily spend caps (Bahrain timezone)
+  max_daily_spend_usd:
+    type: number
+    default: 6.0
+    description: "Maximum spend per Bahrain day in USD"
+  max_daily_minutes:
+    type: number
+    default: 20.0
+    description: "Maximum minutes per Bahrain day"
+  max_daily_calls:
+    type: integer
+    default: 10
+    description: "Maximum calls per Bahrain day"
+  # Phase 1: Voicemail and retry policy
+  voicemail_mode:
+    type: string
+    default: "leave_callback"
+    description: "Voicemail mode: 'leave_callback' or 'hangup_silent'"
+  max_retries:
+    type: integer
+    default: 2
+    description: "Max retries on no_answer/busy/voicemail"

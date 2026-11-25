@@ -85,7 +85,7 @@ def test_first_response_forces_ai_disclosure_after_greeting(harness, record):
     assert kinds[0] == "session.update" and "response.create" in kinds
     assert len(responses(harness)) == 1
     first = responses(harness)[0]["response"]["instructions"]
-    assert "an AI assistant calling on behalf of" in first and line in first
+    assert "AI assistant" in first and line in first
     step = first.split("CURRENT STEP")[-1]
     assert "goal" not in step.lower() and "brief" not in step.lower()
     # Per-response instructions replace the session ones in Realtime: the opening must carry
@@ -337,12 +337,12 @@ def test_transcripts_collected_both_sides(harness):
         start(harness, ws, cid, token)
         wait_for(lambda: harness.rt.of("session.update"))
         harness.rt.push({"type": "response.output_audio_transcript.done",
-                         "transcript": "Hi, this is an AI assistant calling on behalf of Winch."})
+                         "transcript": "Hi, I'm calling as Winch's AI assistant to book a table."})
         harness.rt.push({"type": "conversation.item.input_audio_transcription.completed",
                          "transcript": "Bella Napoli, how can I help?"})
         wait_for(lambda: len(harness.store.transcript(cid)) == 2)
     lines = harness.store.transcript(cid)
-    assert [(t["role"], t["text"][:8]) for t in lines] == [("agent", "Hi, this"),
+    assert [(t["role"], t["text"][:8]) for t in lines] == [("agent", "Hi, I'm "),
                                                            ("callee", "Bella Na")]
 
 

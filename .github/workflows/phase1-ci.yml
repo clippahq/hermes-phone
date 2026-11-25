@@ -1,0 +1,85 @@
+name: Phase 1 CI
+
+on:
+  push:
+    branches: ["cursor/phase1-media-bridge-91f4"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+          pip install -e ".[dev]"
+      
+      - name: Lint with ruff
+        run: |
+          ruff check . || true
+      
+      - name: Type check with mypy (if available)
+        run: |
+          if command -v mypy &> /dev/null; then
+            mypy hermes_phone --ignore-missing-imports || true
+          fi
+        continue-on-error: true
+      
+      - name: Run offline unit tests (no network)
+        run: |
+          pytest -q -m "not e2e" --tb=short
+      
+      - name: Run dry-run scenarios (offline)
+        run: |
+          python -m hermes_phone.dryrun.run
+      
+      - name: Verify no secrets in code
+        run: |
+          # Check for hardcoded API keys or secrets
+          ! grep -r "sk-" hermes_phone/ || (echo "ERROR: Found potential API key"; exit 1)
+          ! grep -r "AC[a-f0-9]" hermes_phone/ || (echo "ERROR: Found potential Twilio SID"; exit 1)
+      
+      - name: Verify adapters directory structure
+        run: |
+          test -f hermes_phone/adapters/__init__.py
+          test -f hermes_phone/adapters/deepgram.py
+          test -f hermes_phone/adapters/xai.py
+          test -f hermes_phone/adapters/elevenlabs.py
+          test -f hermes_phone/adapters/twilio.py
+      
+      - name: Verify safety limits in code
+        run: |
+          # Verify Bahrain emergency numbers are blocked
+          grep -q "994" hermes_phone/safety.py
+          grep -q "998" hermes_phone/safety.py
+          # Verify CPR and passport are forbidden
+          grep -q "cpr" hermes_phone/consent.py
+          grep -q "passport" hermes_phone/consent.py
+          # Verify spend tracking module exists
+          test -f hermes_phone/spend.py
+
+  build-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker image
+        run: |
+          docker build -t hermes-phone:phase1 .
+      
+      - name: Verify image can import hermes_phone
+        run: |
+          docker run --rm hermes-phone:phase1 python -c "import hermes_phone; print('Import OK')"

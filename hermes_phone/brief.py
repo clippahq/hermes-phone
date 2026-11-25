@@ -2,13 +2,24 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 from typing import Any
 
 from . import consent
 
-DISCLOSURE = "Hi, this is an AI assistant calling on behalf of {user_name}."
+# Phase 1: Configurable opener text (English and Arabic)
+# Default per Mohamed's decision (25 Nov 2026 23:11): AI identity only, no transcription mention
+DISCLOSURE_EN_DEFAULT = "Hi, I'm calling as {user_name}'s AI assistant to book a table."
+DISCLOSURE_AR_DEFAULT = "السلام عليكم، أتصل كمساعد ذكي نيابةً عن {user_name} لحجز طاولة."
 RECORDED = "This call may be recorded."
+
+
+def _get_disclosure(language: str = "en") -> str:
+    """Get configurable disclosure text from env, with fallback to defaults."""
+    if language == "ar":
+        return os.environ.get("HERMES_PHONE_OPENER_TEXT_AR", DISCLOSURE_AR_DEFAULT)
+    return os.environ.get("HERMES_PHONE_OPENER_TEXT_EN", DISCLOSURE_EN_DEFAULT)
 DEFAULT_MAX_DURATION_S = 300
 DEFAULT_QUESTION_TIMEOUT_S = 75
 MIN_QUESTION_TIMEOUT_S = 30
@@ -20,10 +31,15 @@ DEFAULT_USER_NAME = "my user"
 WONT_SHARE_ALWAYS = "card data, address, ID numbers, anything not listed above"
 
 
-def opening_line(user_name: str, record: bool = False) -> str:
-    """First thing the callee hears. AI disclosure is always the first sentence."""
+def opening_line(user_name: str, record: bool = False, language: str = "en") -> str:
+    """First thing the callee hears. AI disclosure is always the first sentence.
+
+    Phase 1: Configurable via HERMES_PHONE_OPENER_TEXT_EN and _AR env vars.
+    Default (Mohamed's decision 25 Nov 2026): AI identity only, no transcription mention.
+    """
     name = (user_name or "").strip() or DEFAULT_USER_NAME
-    line = DISCLOSURE.format(user_name=name)
+    disclosure = _get_disclosure(language)
+    line = disclosure.format(user_name=name)
     if record:
         line += " " + RECORDED
     return line

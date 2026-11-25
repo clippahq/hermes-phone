@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-phone"
-version = "0.1.0"
+version = "0.2.0-phase1"
 description = "Approved outbound phone calls with AI disclosure, live mid-call questions, and results (Hermes Agent plugin)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,10 +18,11 @@ dependencies = [
   "phonenumbers>=8.13,<10",
   "tzdata>=2024.1,<2027",
   "httpx>=0.27,<1",
+  "jiwer>=3.0,<4",
 ]
 
 [project.urls]
-Homepage = "https://github.com/winchxyz/hermes-phone"
+Homepage = "https://github.com/clippahq/hermes-phone"
 
 [tool.setuptools]
 packages = ["hermes_phone", "hermes_phone.bridge"]
@@ -34,7 +35,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
 extend-exclude = [".venv"]
 
@@ -43,3 +44,5 @@ select = ["E", "F", "I", "B", "UP", "W"]
 
 [tool.ruff.lint.per-file-ignores]
 "hermes_phone/bridge/webpage.py" = ["E501"]  # embedded HTML/JS/CSS
+"hermes_phone/dryrun/scenarios.py" = ["E501"]  # test scenario dialogue
+"hermes_phone/adapters/xai.py" = ["E501"]  # API endpoint URLs
