@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 PLUGIN_NAME = "hermes-phone"
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 DB_ENV = "HERMES_PHONE_DB"
 
 _SCHEMA_V1 = """
@@ -135,14 +135,20 @@ ALTER TABLE questions ADD COLUMN card_suggestion TEXT;
 CREATE INDEX IF NOT EXISTS idx_calls_origin ON calls(origin_session_id, state);
 """
 
+_SCHEMA_V7 = """
+ALTER TABLE calls ADD COLUMN bahrain_date TEXT;
+ALTER TABLE calls ADD COLUMN cost_usd REAL;
+CREATE INDEX IF NOT EXISTS idx_calls_bahrain_date ON calls(bahrain_date);
+"""
+
 _MIGRATIONS: dict[int, str] = {1: _SCHEMA_V1, 2: _SCHEMA_V2, 3: _SCHEMA_V3, 4: _SCHEMA_V4,
-                               5: _SCHEMA_V5, 6: _SCHEMA_V6}
+                               5: _SCHEMA_V5, 6: _SCHEMA_V6, 7: _SCHEMA_V7}
 
 # Columns callers may update through update_call.
 _CALL_COLUMNS = {
     "state", "approved_at", "dialed_at", "ended_at", "provider_sid", "outcome", "reason",
     "result_json", "result_delivered", "user_id", "session_id", "duration_s",
-    "hangup_requested_at", "result_posted_at",
+    "hangup_requested_at", "result_posted_at", "bahrain_date", "cost_usd",
 }
 
 
@@ -292,6 +298,14 @@ class Store:
         row = self._one("SELECT MAX(dialed_at) AS t FROM calls WHERE number=? "
                         "AND dialed_at IS NOT NULL", (number,))
         return row["t"] if row and row["t"] is not None else None
+
+    def get_calls_by_bahrain_date(self, bahrain_date: str) -> list[dict]:
+        """Return all calls for a given Bahrain date (YYYY-MM-DD format).
+        
+        Used by spend tracking to enforce daily limits in Bahrain timezone.
+        """
+        return self._all("SELECT * FROM calls WHERE bahrain_date=? AND dialed_at IS NOT NULL",
+                        (bahrain_date,))
 
     def undelivered_results(self) -> list[dict]:
         """Ended calls whose result nobody has reported yet (not posted by a watcher, not

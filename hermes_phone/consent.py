@@ -10,7 +10,8 @@ import re
 from typing import Any
 
 SENSITIVE_FIELDS = ("card", "address", "id_number", "bank", "email", "phone")
-FORBIDDEN_FIELDS = ("cvv", "password", "otp")
+# Phase 1: Added cpr (Bahrain CPR/national ID) and passport as forbidden, never share with or without consent
+FORBIDDEN_FIELDS = ("cvv", "password", "otp", "cpr", "passport")
 
 # Key-name patterns -> field. Forbidden fields are checked first.
 _KEY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -18,8 +19,12 @@ _KEY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("otp", re.compile(r"otp|one[_\s-]?time|2fa|mfa|verification[_\s-]?code"
                        r"|auth(entication)?[_\s-]?code|sms[_\s-]?code")),
     ("password", re.compile(r"passw|passcode|\bpin\b|secret|credential|api[_\s-]?key|token")),
+    # Phase 1: Added CPR and passport as forbidden (Bahrain deployment)
+    ("cpr", re.compile(r"\bcpr\b|civil[_\s-]?personal[_\s-]?registry|bahrain[_\s-]?id"
+                      r"|bahraini[_\s-]?(national[_\s-]?)?id", re.IGNORECASE)),
+    ("passport", re.compile(r"passport|travel[_\s-]?doc", re.IGNORECASE)),
     ("card", re.compile(r"card|credit|debit|\bcc\b|\bpan\b|expir")),
-    ("id_number", re.compile(r"passport|ssn|social[_\s-]?security|national[_\s-]?id|tax[_\s-]?id"
+    ("id_number", re.compile(r"ssn|social[_\s-]?security|national[_\s-]?id|tax[_\s-]?id"
                              r"|\bid[_\s-]?(number|num|no)\b|\bid\b|licen[cs]e|\bnin\b|\bitin\b")),
     ("bank", re.compile(r"bank|iban|routing|swift|\bbic\b|sort[_\s-]?code"
                         r"|account[_\s-]?(number|no|num)")),
@@ -168,9 +173,13 @@ _QUESTION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
                        r"|(sms|text|2fa|authentication|auth) code|\b2fa\b", re.I)),
     ("password", re.compile(r"passw(or)?d|passcode|\bpin( code| number)?\b|security answer",
                             re.I)),
+    # Phase 1: Added CPR and passport question patterns (Bahrain deployment)
+    ("cpr", re.compile(r"\bcpr\b( number)?|civil personal registry|bahrain(i)? (national )?id"
+                      r"|your id number|identity number", re.I)),
+    ("passport", re.compile(r"passport( number| details)?|travel document", re.I)),
     ("card", re.compile(r"card number|credit card|debit card|payment card|expir(y|ation) date"
                         r"|\bcard\b.{0,20}\b(details|info|number)", re.I)),
-    ("id_number", re.compile(r"passport|social security|\bssn\b|\bnin\b|id (number|card)"
+    ("id_number", re.compile(r"social security|\bssn\b|\bnin\b|id (number|card)"
                              r"|national id|identity (number|card)|driver'?s licen[cs]e"
                              r"|tax (id|number)", re.I)),
     ("bank", re.compile(r"\bbank\b|\biban\b|routing number|account number|sort code|\bswift\b",
