@@ -410,7 +410,7 @@ def test_retry_rechecks_safety(svc, clock):
 
 # ---- AI disclosure check (criterion 4) -------------------------------------------------------
 @pytest.mark.parametrize("first,expected", [
-    ("Hi, this is an AI assistant calling on behalf of Winch.", 1),
+    ("Hi, I'm calling as Winch's AI assistant to book a table.", 1),
     ("Hello, I am calling to book a table.", 0),
 ])
 @pytest.mark.parametrize("keep", [True, False])

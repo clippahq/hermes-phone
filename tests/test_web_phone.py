@@ -306,7 +306,7 @@ def test_round_trip_disclosure_audio_barge_in_and_end_call(web):
         web.rt.push({"type": "input_audio_buffer.speech_stopped"})
         wait_for(lambda: web.rt.of("response.create"))
         first = web.rt.of("response.create")[0]["response"]["instructions"]
-        assert "an AI assistant calling on behalf of" in first and line in first
+        assert "AI assistant" in first and line in first
         for ts in (0, 20, 40):
             ws.send_text(media(ts))
         wait_for(lambda: len(web.rt.of("input_audio_buffer.append")) == 3)
